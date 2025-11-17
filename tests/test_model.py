@@ -1,9 +1,13 @@
 import sys
 import os
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'src'))
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 import pytest
 import numpy as np
+from src.data_loader import load_iris_data
+from src.model import IrisClassifier
+# Assuming these imports exist in your project structure
 from src.data_loader import load_iris_data
 from src.model import IrisClassifier
 
@@ -57,6 +61,57 @@ class TestIrisClassifier:
         original_pred = self.classifier.predict(self.X_test[:5])
         loaded_pred = new_classifier.predict(self.X_test[:5])
         assert np.array_equal(original_pred, loaded_pred)
+
+    # ---------------------------------------------------------
+    # NEW TESTS ADDED BELOW
+    # ---------------------------------------------------------
+
+    def test_input_dimension_mismatch(self):
+        """
+        Test 1: Data Format Check. 
+        Ensure the model raises a ValueError if input features 
+        don't match training shape (Iris has 4 features).
+        """
+        self.classifier.train(self.X_train, self.y_train)
+        
+        # Create fake data with 3 features instead of 4
+        bad_input = np.random.rand(5, 3)
+        
+        # Depending on your implementation, this usually raises a ValueError 
+        # from the underlying sklearn model.
+        with pytest.raises(ValueError):
+            self.classifier.predict(bad_input)
+
+    def test_prediction_determinism(self):
+        """
+        Test 2: Function Output Consistency.
+        Calling predict twice on the exact same data should result 
+        in the exact same output.
+        """
+        self.classifier.train(self.X_train, self.y_train)
+        single_sample = self.X_test[:1]
+        
+        run_1 = self.classifier.predict(single_sample)
+        run_2 = self.classifier.predict(single_sample)
+        
+        assert np.array_equal(run_1, run_2)
+
+    def test_overfitting_sanity_check(self):
+        """
+        Test 3: Small Model Sanity Check.
+        The model should be able to predict the data it was trained on 
+        with very high accuracy. If this fails, the model is not learning.
+        """
+        self.classifier.train(self.X_train, self.y_train)
+        
+        # Predict on the training set
+        train_predictions = self.classifier.predict(self.X_train)
+        
+        # Calculate accuracy manually
+        accuracy = np.mean(train_predictions == self.y_train)
+        
+        # Iris is easy; training accuracy should be near perfect (>90%)
+        assert accuracy > 0.90
 
 def test_data_loading():
     """Test data loading functionality"""
